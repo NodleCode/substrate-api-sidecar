@@ -28,7 +28,40 @@ const WS_URL = process.env.NODE_WS_URL || 'ws://127.0.0.1:9944';
 type Params = { [key: string]: string };
 
 async function main() {
-	const api = await ApiPromise.create({ provider: new WsProvider(WS_URL) });
+	const api = await ApiPromise.create({
+		provider: new WsProvider(WS_URL), types: {
+			"CertificateId": "AccountId",
+			"Application": {
+				"candidate": "AccountId",
+				"candidate_deposit": "Balance",
+				"metadata": "Vec<u8>",
+				"challenger": "Option<AccountId>",
+				"challenger_deposit": "Option<Balance>",
+				"votes_for": "Option<Balance>",
+				"voters_for": "Vec<(AccountId, Balance)>",
+				"votes_against": "Option<Balance>",
+				"voters_against": "Vec<(AccountId, Balance)>",
+				"created_block": "BlockNumber",
+				"challenged_block": "BlockNumber"
+			},
+			"RootCertificate": {
+				"owner": "AccountId",
+				"key": "CertificateId",
+				"created": "BlockNumber",
+				"renewed": "BlockNumber",
+				"revoked": "bool",
+				"validity": "BlockNumber",
+				"child_revocations": "Vec<CertificateId>"
+			},
+			"Amendment": "Call",
+			"VestingSchedule": {
+				"start": "BlockNumber",
+				"period": "BlockNumber",
+				"period_count": "u32",
+				"per_period": "Balance"
+			}
+		}
+	});
 	const handler = new ApiHandler(api);
 	const app = express();
 
@@ -38,7 +71,7 @@ async function main() {
 		app.get(path, async (req, res) => {
 			try {
 				res.send(sanitizeNumbers(await cb(req.params)));
-			} catch(err) {
+			} catch (err) {
 				if (err && typeof err.error === 'string') {
 					res.status(500).send(sanitizeNumbers(err));
 					return;
@@ -56,7 +89,7 @@ async function main() {
 		app.post(path, async (req, res) => {
 			try {
 				res.send(sanitizeNumbers(await cb(req.params, req.body)));
-			} catch(err) {
+			} catch (err) {
 				if (err && typeof err.error === 'string') {
 					res.status(500).send(sanitizeNumbers(err));
 					return;
@@ -186,7 +219,7 @@ async function main() {
 	});
 
 	post('/tx/fee-estimate/', async (_, body) => {
-		if(body && typeof body.tx !== 'string'){
+		if (body && typeof body.tx !== 'string') {
 			return {
 				error: "Missing field `tx` on request body.",
 			};
