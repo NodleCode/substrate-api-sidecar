@@ -17,16 +17,17 @@
 import { ApiPromise } from '@polkadot/api';
 import { BlockHash } from '@polkadot/types/interfaces/chain';
 import { EventRecord } from '@polkadot/types/interfaces/system';
-import { EventData } from '@polkadot/types/generic/Event';
+// import { EventData } from '@polkadot/types/generic/Event';
 import { blake2AsU8a } from '@polkadot/util-crypto';
 import { u8aToHex } from '@polkadot/util';
 import { getSpecTypes } from '@polkadot/types-known';
 import { u32 } from '@polkadot/types/primitive';
+const BN = require("bn.js");
 
-interface SanitizedEvent {
-	method: string;
-	data: EventData;
-}
+// interface SanitizedEvent {
+// 	method: string;
+// 	// data: EventData;
+// }
 
 export default class ApiHandler {
 	// private wsUrl: string,
@@ -37,125 +38,125 @@ export default class ApiHandler {
 	constructor(api: ApiPromise) {
 		this.api = api;
 		// this.wsUrl = wsUrl;
-		this.specVersion = api.createType('u32', -1);
-		this.txVersion = api.createType('u32', -1);
+		this.specVersion = api.createType('u32', 0);
+		this.txVersion = api.createType('u32', 0);
 	}
 
-	async fetchBlock(hash: BlockHash) {
-		const api = await this.ensureMeta(hash);
-		const [{ block }, events] = await Promise.all([
-			api.rpc.chain.getBlock(hash),
-			this.fetchEvents(api, hash),
-		]);
+	// async fetchBlock(hash: BlockHash) {
+	// 	const api = await this.ensureMeta(hash);
+	// 	const [{ block }, events] = await Promise.all([
+	// 		api.rpc.chain.getBlock(hash),
+	// 		this.fetchEvents(api, hash),
+	// 	]);
 
-		const { parentHash, number, stateRoot, extrinsicsRoot } = block.header;
+	// 	const { parentHash, number, stateRoot, extrinsicsRoot } = block.header;
 
-		const logs = block.header.digest.logs.map((log) => {
-			const { type, index, value } = log;
+	// 	const logs = block.header.digest.logs.map((log) => {
+	// 		const { type, index, value } = log;
 
-			return { type, index, value };
-		});
+	// 		return { type, index, value };
+	// 	});
 
-		const defaultSuccess = typeof events === 'string' ? events : false;
-		const extrinsics = block.extrinsics.map((extrinsic) => {
-			const { method, nonce, signature, signer, isSigned, tip, args } = extrinsic;
-			const hash = u8aToHex(blake2AsU8a(extrinsic.toU8a(), 256));
+	// 	const defaultSuccess = typeof events === 'string' ? events : false;
+	// 	const extrinsics = block.extrinsics.map((extrinsic) => {
+	// 		const { method, nonce, signature, signer, isSigned, tip, args } = extrinsic;
+	// 		const hash = u8aToHex(blake2AsU8a(extrinsic.toU8a(), 256));
 
-			return {
-				method: `${method.sectionName}.${method.methodName}`,
-				signature: isSigned ? { signature, signer } : null,
-				nonce,
-				args,
-				tip,
-				hash,
-				info: {},
-				events: [] as SanitizedEvent[],
-				success: defaultSuccess,
-				// paysFee overrides to bool if `system.ExtrinsicSuccess|ExtrinsicFailed` event is present
-				paysFee: null as null | boolean,
-			};
-		});
+	// 		return {
+	// 			method: `${method.sectionName}.${method.methodName}`,
+	// 			signature: isSigned ? { signature, signer } : null,
+	// 			nonce,
+	// 			args,
+	// 			tip,
+	// 			hash,
+	// 			info: {},
+	// 			events: [] as SanitizedEvent[],
+	// 			success: defaultSuccess,
+	// 			// paysFee overrides to bool if `system.ExtrinsicSuccess|ExtrinsicFailed` event is present
+	// 			paysFee: null as null | boolean,
+	// 		};
+	// 	});
 
-		const onInitialize = { events: [] as SanitizedEvent[] };
-		const onFinalize = { events: [] as SanitizedEvent[] };
+	// 	const onInitialize = { events: [] as SanitizedEvent[] };
+	// 	const onFinalize = { events: [] as SanitizedEvent[] };
 
-		if (Array.isArray(events)) {
-			for (const record of events) {
-				const { event, phase } = record;
-				const sanitizedEvent = {
-					method: `${event.section}.${event.method}`,
-					data: event.data,
-				};
+	// 	if (Array.isArray(events)) {
+	// 		for (const record of events) {
+	// 			const { event, phase } = record;
+	// 			const sanitizedEvent = {
+	// 				method: `${event.section}.${event.method}`,
+	// 				data: event.data,
+	// 			};
 
-				if (phase.isApplyExtrinsic) {
-					const extrinsicIdx = phase.asApplyExtrinsic.toNumber();
-					const extrinsic = extrinsics[extrinsicIdx];
+	// 			if (phase.isApplyExtrinsic) {
+	// 				const extrinsicIdx = phase.asApplyExtrinsic.toNumber();
+	// 				const extrinsic = extrinsics[extrinsicIdx];
 
-					if (!extrinsic) {
-						throw new Error(`Missing extrinsic ${extrinsicIdx} in block ${hash}`);
-					}
+	// 				if (!extrinsic) {
+	// 					throw new Error(`Missing extrinsic ${extrinsicIdx} in block ${hash}`);
+	// 				}
 
-					const method = `${event.section}.${event.method}`;
+	// 				const method = `${event.section}.${event.method}`;
 
-					if (method === 'system.ExtrinsicSuccess') {
-						extrinsic.success = true;
-					}
+	// 				if (method === 'system.ExtrinsicSuccess') {
+	// 					extrinsic.success = true;
+	// 				}
 
-					if (method === 'system.ExtrinsicSuccess' || method === 'system.ExtrinsicFailed') {
-						const sanitizedData = event.data.toJSON() as any[];
+	// 				if (method === 'system.ExtrinsicSuccess' || method === 'system.ExtrinsicFailed') {
+	// 					const sanitizedData = event.data.toJSON() as any[];
 
-						for (const data of sanitizedData) {
-							if (data && data.paysFee) {
-								extrinsic.paysFee =
-									data.paysFee === true ||
-									data.paysFee === 'Yes';
+	// 					for (const data of sanitizedData) {
+	// 						if (data && data.paysFee) {
+	// 							extrinsic.paysFee =
+	// 								data.paysFee === true ||
+	// 								data.paysFee === 'Yes';
 
-								break;
-							}
-						}
-					}
+	// 							break;
+	// 						}
+	// 					}
+	// 				}
 
-					extrinsic.events.push(sanitizedEvent);
-				} else if (phase.isFinalization) {
-					onFinalize.events.push(sanitizedEvent);
-				} else if (phase.isInitialization) {
-					onInitialize.events.push(sanitizedEvent);
-				}
-			}
-		}
+	// 				extrinsic.events.push(sanitizedEvent);
+	// 			} else if (phase.isFinalization) {
+	// 				onFinalize.events.push(sanitizedEvent);
+	// 			} else if (phase.isInitialization) {
+	// 				onInitialize.events.push(sanitizedEvent);
+	// 			}
+	// 		}
+	// 	}
 
-		for (let idx = 0; idx < block.extrinsics.length; ++idx) {
-			if (!extrinsics[idx].paysFee || !block.extrinsics[idx].isSigned) {
-				continue;
-			}
+	// 	for (let idx = 0; idx < block.extrinsics.length; ++idx) {
+	// 		if (!extrinsics[idx].paysFee || !block.extrinsics[idx].isSigned) {
+	// 			continue;
+	// 		}
 
-			try {
-				// This is only a temporary solution. This runtime RPC will not work if types or logic
-				// involved in fee calculation changes in a runtime upgrade. For a long-term solution,
-				// we need to calculate fees based on the metadata constants and fee multiplier.
-				// https://github.com/paritytech/substrate-api-sidecar/issues/45
-				extrinsics[idx].info = api.createType(
-					'RuntimeDispatchInfo',
-					await api.rpc.payment.queryInfo(block.extrinsics[idx].toHex(), parentHash)
-				);
-			} catch (err) {
-				console.error(err);
-				extrinsics[idx].info = { error: 'Unable to fetch fee info' };
-			}
-		}
+	// 		try {
+	// 			// This is only a temporary solution. This runtime RPC will not work if types or logic
+	// 			// involved in fee calculation changes in a runtime upgrade. For a long-term solution,
+	// 			// we need to calculate fees based on the metadata constants and fee multiplier.
+	// 			// https://github.com/paritytech/substrate-api-sidecar/issues/45
+	// 			extrinsics[idx].info = api.createType(
+	// 				'RuntimeDispatchInfo',
+	// 				await api.rpc.payment.queryInfo(block.extrinsics[idx].toHex(), parentHash)
+	// 			);
+	// 		} catch (err) {
+	// 			console.error(err);
+	// 			extrinsics[idx].info = { error: 'Unable to fetch fee info' };
+	// 		}
+	// 	}
 
-		return {
-			number,
-			hash,
-			parentHash,
-			stateRoot,
-			extrinsicsRoot,
-			logs,
-			onInitialize,
-			extrinsics,
-			onFinalize,
-		};
-	}
+	// 	return {
+	// 		number,
+	// 		hash,
+	// 		parentHash,
+	// 		stateRoot,
+	// 		extrinsicsRoot,
+	// 		logs,
+	// 		onInitialize,
+	// 		extrinsics,
+	// 		onFinalize,
+	// 	};
+	// }
 
 	async fetchBalance(hash: BlockHash, address: string) {
 		const api = await this.ensureMeta(hash);
@@ -182,10 +183,12 @@ export default class ApiHandler {
 			return {
 				at,
 				nonce,
-				free,
-				reserved,
-				miscFrozen,
-				feeFrozen,
+				// Nodle specific but we do not really care as this old repo is not
+				// intended to be used by anyone else
+				free: free.toString(),
+				reserved: reserved.toString(),
+				miscFrozen: miscFrozen.toString(),
+				feeFrozen: feeFrozen.toString(),
 				locks,
 			};
 		} else {

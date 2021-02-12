@@ -1,13 +1,11 @@
-import AbstractInt from '@polkadot/types/codec/AbstractInt';
-
 export function parseNumber(n: string): number {
-	const num = Number(n);
+    const num = Number(n);
 
-	if (!Number.isInteger(num)) {
-		throw { error: 'Invalid block number' };
-	}
+    if (!Number.isInteger(num)) {
+        throw { error: 'Invalid block number' };
+    }
 
-	return num;
+    return num;
 }
 
 // A sanitizer for arbitrary data that's going to be
@@ -15,16 +13,16 @@ export function parseNumber(n: string): number {
 // which is using bn.js as backend, and forcibly serialize it
 // to a decimal string.
 export function sanitizeNumbers(data: any): any {
-    if (typeof data === "number" || data instanceof AbstractInt) {
+    if (typeof data === "number") {
         return data.toString(10);
     }
 
     if (data instanceof Object) {
-        if (data._raw != null && data._raw instanceof AbstractInt) {
+        if (data._raw != null) {
             return data._raw.toString(10);
         }
 
-        if (data.raw != null && data.raw instanceof AbstractInt) {
+        if (data.raw != null) {
             return data.raw.toString(10);
         }
 

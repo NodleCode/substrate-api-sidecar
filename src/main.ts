@@ -54,7 +54,7 @@ async function main() {
 				"child_revocations": "Vec<CertificateId>"
 			},
 			"Amendment": "Call",
-			"VestingSchedule": {
+			"VestingScheduleOf": {
 				"start": "BlockNumber",
 				"period": "BlockNumber",
 				"period_count": "u32",
@@ -104,18 +104,18 @@ async function main() {
 
 	get('/', async (req) => 'Sidecar is running, go to /block to get latest finalized block');
 
-	get('/block/:number', async (params) => {
-		const number = parseNumber(params.number);
-		const hash = await api.rpc.chain.getBlockHash(number);
+	// get('/block/:number', async (params) => {
+	// 	const number = parseNumber(params.number);
+	// 	const hash = await api.rpc.chain.getBlockHash(number);
 
-		return await handler.fetchBlock(hash);
-	});
+	// 	return await handler.fetchBlock(hash);
+	// });
 
-	get('/block/', async () => {
-		const hash = await api.rpc.chain.getFinalizedHead();
+	// get('/block/', async () => {
+	// 	const hash = await api.rpc.chain.getFinalizedHead();
 
-		return await handler.fetchBlock(hash);
-	});
+	// 	return await handler.fetchBlock(hash);
+	// });
 
 	get('/balance/:address', async (params) => {
 		const { address } = params;
