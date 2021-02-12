@@ -183,8 +183,6 @@ export default class ApiHandler {
 			return {
 				at,
 				nonce,
-				// Nodle specific but we do not really care as this old repo is not
-				// intended to be used by anyone else
 				free: free.toString(),
 				reserved: reserved.toString(),
 				miscFrozen: miscFrozen.toString(),
